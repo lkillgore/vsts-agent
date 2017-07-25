@@ -4,6 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Diagnostics;
+using System.Text;
 
 namespace Microsoft.VisualStudio.Services.Agent.Worker
 {
@@ -63,7 +65,24 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 
         private IEnumerable<IStep> GetJobStepsEnumerator()
         {
-            // TODO: wait for UI
+            int iterations = 0;
+            int index = 0;
+            while(true)
+            {
+                // Ask the user which task to run next
+                index = GetNextTask(index);
+                if (index < 0 || index > initializeResult.JobSteps.Count)
+                {
+                    trace.Verbose($"Completed Jobs queue.  Total iterations: {iterations}");
+                    break;
+                }
+                yield return initializeResult.JobSteps[index];
+                iterations++;
+                directoryManager.SaveDevelopmentSnapshot(executionContext, "step_" + index);
+            }
+
+            /*
+
             foreach (IStep s in initializeResult.JobSteps)
             {
                 if (s == null)
@@ -78,6 +97,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 step++;
                 directoryManager.SaveDevelopmentSnapshot(executionContext, "step_" + step);
             }
+            */
         }
 
         public IEnumerable<IStep> GetPostJobSteps()
@@ -89,5 +109,29 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         {
             return initializeResult.PreJobSteps;
         }
+
+        public int GetNextTask(int currentTaskIndex)
+        {
+            Process process;
+            StringBuilder args = new StringBuilder();
+            for(int i = 0; i < initializeResult.JobSteps.Count; i++)
+            {
+                if (i > 0)
+                {
+                    args.Append(",");
+                }
+                args.Append(initializeResult.JobSteps[i].DisplayName);
+            }
+            args.Append("|");
+            args.Append(currentTaskIndex.ToString());
+            args.Append("|");
+            args.Append("put console output here.");
+
+            ProcessStartInfo startInfo = new ProcessStartInfo("Agent.Debugger.exe", args.ToString());
+            process = Process.Start(startInfo);
+            process.WaitForExit();
+            return process.ExitCode;
+        }
     }
 }
+
