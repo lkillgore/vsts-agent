@@ -6,6 +6,9 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using Microsoft.TeamFoundation.DistributedTask.Orchestration.Server.Expressions;
 
 namespace Microsoft.VisualStudio.Services.Agent.Worker
 {
@@ -20,12 +23,39 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 
     public class StepsQueue : IStepsQueue
     {
+        private sealed class FinalStep : IStep
+        {
+            public static readonly string FinalStepName = "StepsQueueFinalStep";
+
+            public FinalStep()
+            {
+                DisplayName = FinalStepName;
+            }
+
+            public INode Condition { get; set; }
+            public bool ContinueOnError => false;
+            public string DisplayName { get; private set; }
+            public bool Enabled => true;
+            public IExecutionContext ExecutionContext { get; set; }
+            public TimeSpan? Timeout => null;
+
+            public Task RunAsync()
+            {
+                var tcs = new TaskCompletionSource<int>();
+                tcs.SetException(new NotImplementedException());
+                return tcs.Task;
+            }
+        }
         private readonly JobInitializeResult initializeResult;
         private readonly IExecutionContext executionContext;
         private readonly Tracing trace;
         private readonly bool developerMode;
         private readonly IBuildDirectoryManager directoryManager;
-        private int step = 0;
+
+        private BlockingCollection<IStep> jobQueue;
+        private IEnumerator<IStep> jobStepEnumerator;
+        private readonly Stack<IStep> completedJobSteps = new Stack<IStep>();
+        private int total = 0;
         
         public StepsQueue(IHostContext context, IExecutionContext executionContext, JobInitializeResult initializeResult) {
             this.developerMode = true;
@@ -47,13 +77,23 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 
         public void NextStep()
         {
+            if (jobStepEnumerator.MoveNext())
+            {
+                jobQueue.Add(jobStepEnumerator.Current);
+            }
+            else
+            {
+                jobQueue.Add(new FinalStep());
+            }
         }
 
         public void RepeatStep(IStep next)
         {
-            // Restore state
+            directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
+            completedJobSteps.Pop(); // Delete last after the line above
+            jobQueue.Add(next);
         }
-        
+
         public IEnumerable<IStep> GetJobSteps()
         {
             if (developerMode)
@@ -65,6 +105,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 
         private IEnumerable<IStep> GetJobStepsEnumerator()
         {
+            /*
             int iterations = 0;
             int index = 0;
             while(true)
@@ -81,23 +122,34 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 directoryManager.SaveDevelopmentSnapshot(executionContext, "step_" + index);
             }
 
-            /*
-
-            foreach (IStep s in initializeResult.JobSteps)
-            {
-                if (s == null)
-                {
-                    trace.Verbose($"Completed Jobs queue.  Total steps: {step}");
-                    break;
-                }
-
-                trace.Verbose($"Current job{s.DisplayName}");
-                yield return s;
-                trace.Verbose($"Completed job{s.DisplayName}: saving state");
-                step++;
-                directoryManager.SaveDevelopmentSnapshot(executionContext, "step_" + step);
-            }
             */
+
+            using (jobQueue = new BlockingCollection<IStep>())
+            {
+                jobStepEnumerator = initializeResult.JobSteps.GetEnumerator();
+
+                IStep current = null;
+                while (true)
+                {
+                    current = jobQueue.Take(executionContext.CancellationToken);
+                    if (current == null || current.DisplayName.Equals(FinalStep.FinalStepName))
+                    {
+                        trace.Verbose($"Completed Jobs queue.  Total steps: {total}");
+                        break;
+                    }
+                    trace.Verbose($"Current job{current.DisplayName}");
+                    yield return current;
+                    trace.Verbose($"Completed job{current.DisplayName}: saving state");
+                    completedJobSteps.Push(current);
+                    total++;
+                    directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
+                }
+            }
+        }
+
+        private string GetNameForStep(int step)
+        {
+            return "step_" + step;
         }
 
         public IEnumerable<IStep> GetPostJobSteps()
