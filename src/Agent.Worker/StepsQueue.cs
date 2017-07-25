@@ -105,25 +105,29 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 
         private IEnumerable<IStep> GetJobStepsEnumerator()
         {
-            /*
             int iterations = 0;
             int index = 0;
             while(true)
             {
                 // Ask the user which task to run next
+                int last = index;
                 index = GetNextTask(index);
                 if (index < 0 || index > initializeResult.JobSteps.Count)
                 {
                     trace.Verbose($"Completed Jobs queue.  Total iterations: {iterations}");
                     break;
                 }
+                if (last >= index)
+                {
+                    trace.Verbose($"Moving to step: {index}, from step: {last}");
+                    directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
+                }
                 yield return initializeResult.JobSteps[index];
                 iterations++;
-                directoryManager.SaveDevelopmentSnapshot(executionContext, "step_" + index);
+                directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(index));
             }
 
-            */
-
+            /*
             using (jobQueue = new BlockingCollection<IStep>())
             {
                 jobStepEnumerator = initializeResult.JobSteps.GetEnumerator();
@@ -145,6 +149,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                     directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
                 }
             }
+            */
         }
 
         private string GetNameForStep(int step)
@@ -180,9 +185,11 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             args.Append("put console output here.");
 
             ProcessStartInfo startInfo = new ProcessStartInfo("Agent.Debugger.exe", args.ToString());
-            process = Process.Start(startInfo);
-            process.WaitForExit();
-            return process.ExitCode;
+            using(process = Process.Start(startInfo))
+            {
+                process.WaitForExit();
+                return process.ExitCode;
+            }
         }
     }
 }
