@@ -52,10 +52,10 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         private readonly bool developerMode;
         private readonly IBuildDirectoryManager directoryManager;
 
-        private BlockingCollection<IStep> jobQueue;
-        private IEnumerator<IStep> jobStepEnumerator;
-        private readonly Stack<IStep> completedJobSteps = new Stack<IStep>();
-        private int total = 0;
+        // private BlockingCollection<IStep> jobQueue;
+        // private IEnumerator<IStep> jobStepEnumerator;
+        // private readonly Stack<IStep> completedJobSteps = new Stack<IStep>();
+        // private int total = 0;
         
         public StepsQueue(IHostContext context, IExecutionContext executionContext, JobInitializeResult initializeResult) {
             this.developerMode = true;
@@ -75,24 +75,24 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             trace.Verbose($"Post-job steps: '{string.Join(", ", initializeResult.PostJobStep.Select(x => x.DisplayName))}'");
         }
 
-        public void NextStep()
-        {
-            if (jobStepEnumerator.MoveNext())
-            {
-                jobQueue.Add(jobStepEnumerator.Current);
-            }
-            else
-            {
-                jobQueue.Add(new FinalStep());
-            }
-        }
+        // public void NextStep()
+        // {
+        //     if (jobStepEnumerator.MoveNext())
+        //     {
+        //         jobQueue.Add(jobStepEnumerator.Current);
+        //     }
+        //     else
+        //     {
+        //         jobQueue.Add(new FinalStep());
+        //     }
+        // }
 
-        public void RepeatStep(IStep next)
-        {
-            directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
-            completedJobSteps.Pop(); // Delete last after the line above
-            jobQueue.Add(next);
-        }
+        // public void RepeatStep(IStep next)
+        // {
+        //     directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
+        //     completedJobSteps.Pop(); // Delete last after the line above
+        //     jobQueue.Add(next);
+        // }
 
         public IEnumerable<IStep> GetJobSteps()
         {
@@ -120,7 +120,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 if (last >= index)
                 {
                     trace.Verbose($"Moving to step: {index}, from step: {last}");
-                    directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
+                    directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(index - 1));
                 }
                 yield return initializeResult.JobSteps[index];
                 iterations++;
