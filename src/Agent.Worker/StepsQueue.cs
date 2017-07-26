@@ -23,40 +23,12 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 
     public class StepsQueue : IStepsQueue
     {
-        private sealed class FinalStep : IStep
-        {
-            public static readonly string FinalStepName = "StepsQueueFinalStep";
-
-            public FinalStep()
-            {
-                DisplayName = FinalStepName;
-            }
-
-            public INode Condition { get; set; }
-            public bool ContinueOnError => false;
-            public string DisplayName { get; private set; }
-            public bool Enabled => true;
-            public IExecutionContext ExecutionContext { get; set; }
-            public TimeSpan? Timeout => null;
-
-            public Task RunAsync()
-            {
-                var tcs = new TaskCompletionSource<int>();
-                tcs.SetException(new NotImplementedException());
-                return tcs.Task;
-            }
-        }
         private readonly JobInitializeResult initializeResult;
         private readonly IExecutionContext executionContext;
         private readonly Tracing trace;
         private readonly bool developerMode;
         private readonly IBuildDirectoryManager directoryManager;
 
-        // private BlockingCollection<IStep> jobQueue;
-        // private IEnumerator<IStep> jobStepEnumerator;
-        // private readonly Stack<IStep> completedJobSteps = new Stack<IStep>();
-        // private int total = 0;
-        
         public StepsQueue(IHostContext context, IExecutionContext executionContext, JobInitializeResult initializeResult) {
             this.developerMode = true;
             this.trace = context.GetTrace(nameof(Program));
@@ -74,25 +46,6 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             trace.Info($"Total post-job steps: {initializeResult.PostJobStep.Count}.");
             trace.Verbose($"Post-job steps: '{string.Join(", ", initializeResult.PostJobStep.Select(x => x.DisplayName))}'");
         }
-
-        // public void NextStep()
-        // {
-        //     if (jobStepEnumerator.MoveNext())
-        //     {
-        //         jobQueue.Add(jobStepEnumerator.Current);
-        //     }
-        //     else
-        //     {
-        //         jobQueue.Add(new FinalStep());
-        //     }
-        // }
-
-        // public void RepeatStep(IStep next)
-        // {
-        //     directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
-        //     completedJobSteps.Pop(); // Delete last after the line above
-        //     jobQueue.Add(next);
-        // }
 
         public IEnumerable<IStep> GetJobSteps()
         {
@@ -114,6 +67,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 index = GetNextTask(index);
                 if (index < 0 || index > initializeResult.JobSteps.Count)
                 {
+                    trace.Verbose($"Index: {index}, count: {initializeResult.JobSteps.Count}");
                     trace.Verbose($"Completed Jobs queue.  Total iterations: {iterations}");
                     break;
                 }
@@ -126,30 +80,6 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 iterations++;
                 directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(index));
             }
-
-            /*
-            using (jobQueue = new BlockingCollection<IStep>())
-            {
-                jobStepEnumerator = initializeResult.JobSteps.GetEnumerator();
-
-                IStep current = null;
-                while (true)
-                {
-                    current = jobQueue.Take(executionContext.CancellationToken);
-                    if (current == null || current.DisplayName.Equals(FinalStep.FinalStepName))
-                    {
-                        trace.Verbose($"Completed Jobs queue.  Total steps: {total}");
-                        break;
-                    }
-                    trace.Verbose($"Current job{current.DisplayName}");
-                    yield return current;
-                    trace.Verbose($"Completed job{current.DisplayName}: saving state");
-                    completedJobSteps.Push(current);
-                    total++;
-                    directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(completedJobSteps.Count));
-                }
-            }
-            */
         }
 
         private string GetNameForStep(int step)
@@ -169,8 +99,8 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 
         public int GetNextTask(int currentTaskIndex)
         {
-            Process process;
             StringBuilder args = new StringBuilder();
+            trace.Verbose($"GetNextTask({currentTaskIndex}) count({initializeResult.JobSteps.Count})");
             for(int i = 0; i < initializeResult.JobSteps.Count; i++)
             {
                 if (i > 0)
@@ -185,11 +115,10 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             args.Append("put console output here.");
 
             ProcessStartInfo startInfo = new ProcessStartInfo("Agent.Debugger.exe", args.ToString());
-            using(process = Process.Start(startInfo))
-            {
-                process.WaitForExit();
-                return process.ExitCode;
-            }
+            trace.Verbose($"startInfo({args.ToString()})");
+            Process process = Process.Start(startInfo);
+            process.WaitForExit();
+            return process.ExitCode;
         }
     }
 }
