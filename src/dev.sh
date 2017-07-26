@@ -240,23 +240,23 @@ function layout ()
     bash ./Misc/externals.sh || checkRC externals.sh
 }
 
-# function update ()
-# {
-#     if [[ "$DEV_SUBCMD" != '' ]]; then
-#         update_dirs=(${DEV_SUBCMD})
-#     else
-#         update_dirs=${bin_layout_dirs[@]}
-#     fi
+function update ()
+{
+    if [[ "$DEV_SUBCMD" != '' ]]; then
+        update_dirs=(${DEV_SUBCMD})
+    else
+        update_dirs=${bin_layout_dirs[@]}
+    fi
 
-#     for update_dir in ${update_dirs[@]}
-#     do
-#         echo Updating ${update_dir}
-#         rundotnet build failed ${update_dir}
-#         echo Publishing ${update_dir}
-#         rundotnet publish failed ${update_dir}
-#         copyBin ${update_dir}
-#     done
-# }
+    for update_dir in ${update_dirs[@]}
+    do
+        echo Updating ${update_dir}
+        rundotnet build failed ${update_dir}
+        echo Publishing ${update_dir}
+        rundotnet publish failed ${update_dir}
+        copyBin ${update_dir}
+    done
+}
 
 function runtest ()
 {
