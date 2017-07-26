@@ -49,6 +49,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         void AddIssue(Issue issue);
         void Progress(int percentage, string currentOperation = null);
         void UpdateDetailTimelineRecord(TimelineRecord record);
+        void reset();
     }
 
     public sealed class ExecutionContext : AgentService, IExecutionContext
@@ -478,6 +479,11 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 this.Warning(StringUtil.Loc("ServerTarpit"));
                 _throttlingReported = true;
             }
+        }
+
+        public void reset()
+        {
+            _cancellationTokenSource = new CancellationTokenSource();
         }
     }
 

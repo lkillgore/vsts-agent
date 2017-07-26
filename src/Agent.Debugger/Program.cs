@@ -6,10 +6,12 @@ namespace Agent.Debugger
     {
         static void Main(string[] args)
         {
-                var state = ReadState(args[0]);
-                DisplayCurrentState(state);
-                var action = GetAction(state);
-                SendAction(action);
+            Console.WriteLine("What do you want to do?");
+            Environment.Exit(1);
+            // var state = ReadState(args[0]);
+            // DisplayCurrentState(state);
+            // var action = GetAction(state);
+            // SendAction(action);
         }
 
         private static void SendAction(Action action)
