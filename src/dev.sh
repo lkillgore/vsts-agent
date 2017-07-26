@@ -375,8 +375,8 @@ case $DEV_CMD in
    "r") restore;;
    "layout") layout;;
    "l") layout;;
-#    "update") update;;
-#    "u") update;;
+   "update") update;;
+   "u") update;;
    "package") package;;
    "p") package;;
    "validate") validate;;
