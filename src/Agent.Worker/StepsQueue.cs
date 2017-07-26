@@ -27,17 +27,15 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
     {
         private readonly JobInitializeResult initializeResult;
         private readonly IExecutionContext executionContext;
-        private readonly CancellationToken cancelToken;
         private readonly Tracing trace;
         private readonly bool developerMode;
         private readonly IBuildDirectoryManager directoryManager;
 
-        public StepsQueue(IHostContext context, IExecutionContext executionContext, JobInitializeResult initializeResult, CancellationToken cancelToken) {
+        public StepsQueue(IHostContext context, IExecutionContext executionContext, JobInitializeResult initializeResult) {
             this.developerMode = true;
             this.trace = context.GetTrace(nameof(Program));
             this.initializeResult = initializeResult;
             this.executionContext = executionContext;
-            this.cancelToken = cancelToken;
             this.directoryManager = context.GetService<IBuildDirectoryManager>();
 
             // trace out all steps
