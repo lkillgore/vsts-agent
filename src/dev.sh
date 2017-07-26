@@ -49,9 +49,9 @@ elif [[ "$PLATFORM" == 'darwin' ]]; then
    runtime_id='osx.10.11-x64'
 fi
 
-build_dirs=("Microsoft.VisualStudio.Services.Agent" "Agent.Listener" "Agent.Worker" "Test")
-build_clean_dirs=("Agent.Listener" "Test" "Agent.Worker" "Microsoft.VisualStudio.Services.Agent")
-bin_layout_dirs=("Agent.Listener" "Microsoft.VisualStudio.Services.Agent" "Agent.Worker")
+build_dirs=("Microsoft.VisualStudio.Services.Agent" "Agent.Listener" "Agent.Worker" "Agent.Debugger" "Test")
+build_clean_dirs=("Agent.Listener" "Test" "Agent.Worker" "Agent.Debugger" "Microsoft.VisualStudio.Services.Agent")
+bin_layout_dirs=("Agent.Debugger" "Agent.Listener" "Microsoft.VisualStudio.Services.Agent" "Agent.Worker")
 WINDOWSAGENTSERVICE_PROJFILE="Agent.Service/Windows/AgentService.csproj"
 WINDOWSAGENTSERVICE_BIN="Agent.Service/Windows/bin/Debug"
 
@@ -226,6 +226,7 @@ function layout ()
     if [[ "$PLATFORM" == 'linux' ]]; then
         chmod +x ${LAYOUT_DIR}/bin/Agent.Listener
         chmod +x ${LAYOUT_DIR}/bin/Agent.Worker
+        chmod +x ${LAYOUT_DIR}/bin/Agent.Debugger
     fi
 
     # clean up files not meant for platform
