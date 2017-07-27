@@ -209,12 +209,23 @@ function getMainView() {
             let node = document.getElementById('parameters');
             post('/updateparameters/', {taskId: taskId, parameters: node.textContent});
         }
+
+        function toggleShowState() {
+            var ele = document.getElementById("fullState");
+            if(ele.style.display == "block") {
+                ele.style.display = "none";
+            }
+            else {
+                ele.style.display = "block";
+            }
+        }
     </SCRIPT>
     <div id="wrapper">
         <div id="header">
             <div style="text-align:center; padding-top:30; margin-bottom:30; width=100%;">
                 <a class="btn" onclick="updateParameters(${nextTask})" title="Save Changes and Continue Execution">&#9658</a>
                 <a class="btn" onclick="updateParameters(-100)" title="Stop Debugging and Continue Execution">&#9724</a>
+                <a class="btn" onclick="toggleShowState()" title="Show/Hide the latest tasks and inputs">&#916</a>
             </div>
         <table width="100%">
             <tr>
@@ -222,6 +233,7 @@ function getMainView() {
                 <td class="sep">&rarr;</td>`;
     html += htmlTasks;
 
+    let fullStateJson = JSON.stringify(state, null, 4);
     let parametersHeader = nextTaskInstance ? nextTaskInstance.name + ' Parameters (editable json)': 'No task selected to run next';
     let parametersJson = nextTaskInstance ? JSON.stringify(nextTaskInstance.parameters, undefined, 4) : '';
     let parametersEncoded = "'" + encodeURIComponent(parametersJson) + "'";
@@ -230,6 +242,7 @@ function getMainView() {
                 <td id="spacer"><div></div></td>
             </tr>
         </table>
+        <div id="fullState" style="display:none; width:100%; margin-top:30; white-space: pre-wrap;">${fullStateJson}</div>
         <div style="width:100%; margin-top:30; text-align:center;">${parametersHeader}</div>
         <div contenteditable id="parameters" style="background-color:#D0D0D0; color:#000000; white-space: pre-wrap;">${parametersJson}</div>
         </div>
