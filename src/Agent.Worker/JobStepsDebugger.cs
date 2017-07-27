@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,34 +20,54 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
 {
     public class JobStepsDebugger
     {
-        private NodeHandler nodeDebugger;
+        private Process nodeDebugger;
         private HttpClient debuggerClient; 
 
         public JobStepsDebugger(IHostContext context, IExecutionContext executionContext) 
         {
-            Start(context, executionContext);
+            Start();
         }
 
-        private void Start(IHostContext context, IExecutionContext executionContext) 
+        private void Start() 
         {
             //TODO remove
             Debugger.Launch();
 
-            if (nodeDebugger == null) 
+            if (debuggerClient == null)
             {
-                nodeDebugger = (NodeHandler)context.CreateService<INodeHandler>();
-                nodeDebugger.TaskDirectory = Path.Combine(context.GetDirectory(WellKnownDirectory.Bin), "debugger");
-                nodeDebugger.Data = new NodeHandlerData() 
-                {
-                    Target = "server.js",
-                    WorkingDirectory = "", 
-                };
-                nodeDebugger.ExecutionContext = executionContext;
-                nodeDebugger.Inputs = new Dictionary<string, string>();
-                nodeDebugger.RunAsync();
                 debuggerClient = new HttpClient();
                 debuggerClient.BaseAddress = new Uri("http://127.0.0.1:7777/");
             }
+
+            if (nodeDebugger == null) 
+            {
+                RunAsync();
+            }
+        }
+
+        private async void RunAsync() 
+        {
+            await Task.Run(() => {
+                nodeDebugger = CreateNodeProcess();
+                nodeDebugger.Start();
+                nodeDebugger.WaitForExit();
+            });            
+        }
+
+        private Process CreateNodeProcess()
+        {
+            string binFolder = Assembly.GetEntryAssembly().Location;
+            string nodeBinFolder = Path.Combine(Path.GetDirectoryName(binFolder), "..", "externals", "node", "bin");
+            string serverJS = Path.Combine(Path.GetDirectoryName(binFolder), "debugger", "server.js");
+            string nodeExe = Path.Combine(nodeBinFolder, "node.exe");
+            Process newProcess = new Process();
+            newProcess.StartInfo = new ProcessStartInfo(nodeExe, serverJS);
+            newProcess.StartInfo.CreateNoWindow = true;
+            newProcess.StartInfo.UseShellExecute = false;
+            newProcess.StartInfo.RedirectStandardInput = false;
+            newProcess.StartInfo.RedirectStandardOutput = false;
+            newProcess.StartInfo.RedirectStandardError = false;
+            return newProcess;
         }
 
         public void UpdateState(int currentTaskIndex, List<IStep> steps) 
