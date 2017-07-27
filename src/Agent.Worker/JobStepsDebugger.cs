@@ -108,11 +108,13 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                         JObject jsonObject = JObject.Parse(content);
                         Trace.TraceInformation($"Returned from UI: {jsonObject}");
                         step = jsonObject.GetValue("next").ToObject<int>();
-                        IDictionary<string, JToken> properties = (JObject) jsonObject.GetValue("parameters");
+                        if (step >= 0) {
+                            IDictionary<string, JToken> properties = (JObject) jsonObject.GetValue("parameters");
 
-                        foreach (string key in properties.Keys)
-                        {
-                            inputsForStep[key] = properties[key].Value<string>();
+                            foreach (string key in properties.Keys)
+                            {
+                                inputsForStep[key] = properties[key].Value<string>();
+                            }
                         }
                     }
                     else
