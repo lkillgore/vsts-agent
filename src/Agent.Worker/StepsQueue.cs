@@ -95,6 +95,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             if (developerMode) 
             {
                 debugger = new JobStepsDebugger(context, executionContext);
+                debugger.UpdateState(-1, initializeResult.JobSteps);
             }
             this.logger = new LoggerDecorator(context, context.CreateService<IPagingLogger>());
 

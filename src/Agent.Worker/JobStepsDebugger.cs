@@ -55,7 +55,16 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             int taskCount = 0;
             foreach(IStep step in steps) 
             {
-                state.tasks[taskCount++] = new DebuggerState.Task() { name = step.DisplayName, parameters = new Dictionary<String,String>() };
+                var parameters = new Dictionary<String,String>();
+                if (step is ITaskRunner)
+                {
+                    ITaskRunner r = (ITaskRunner) step;
+                    foreach (string key in r.TaskInstance.Inputs.Keys)
+                    {
+                        parameters.Add(key, r.TaskInstance.Inputs[key]);
+                    }
+                }
+                state.tasks[taskCount++] = new DebuggerState.Task() { name = step.DisplayName, parameters = parameters };
             }                                                                
 
             debuggerClient.PostAsJsonAsync<DebuggerState>("http://127.0.0.1:7777/update", state);
