@@ -66,7 +66,7 @@ function setState(newState) {
 }
 
 function updateAndContinue(taskId, newParameters) {
-    if (taskId > 0) {
+    if (taskId >= 0) {
         if (state && state.tasks) {
             state.tasks[taskId].parameters = newParameters;
         }

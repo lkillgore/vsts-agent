@@ -126,9 +126,17 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             return step;
         }
 
-        public void AppendLog(string log)
+        public void AppendLog(string l)
         {
-            // debuggerClient.PostAsync<DebuggerState>("http://127.0.0.1:7777/appendconsole", log);
+            l = l.Replace('\r', ' ');
+            Log log = new Log();
+            log.lines = l.Split(new char[] {'\n'});
+            debuggerClient.PostAsJsonAsync("http://127.0.0.1:7777/appendconsole", log);
+        }
+
+        private class Log
+        {
+            public String[] lines { get; set; }
         }
 
         public class DebuggerState 
