@@ -36,6 +36,54 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         private readonly IHostContext context;
         private readonly JobStepsDebugger debugger;
 
+        private sealed class LoggerDecorator : IPagingLogger
+        {
+            private readonly IHostContext context;
+            private readonly IPagingLogger logger;
+            private readonly StringBuilder buffer = new StringBuilder();
+
+            public LoggerDecorator(IHostContext context, IPagingLogger logger)
+            {
+                this.context = context;
+                this.logger = logger;
+                logger.Setup(Guid.NewGuid(), Guid.NewGuid());
+            }
+            public void End()
+            {
+                logger.End();
+                buffer.AppendLine("End");
+            }
+
+            public void Initialize(IHostContext context)
+            {
+                buffer.AppendLine("Initialize");
+                logger.Initialize(context);
+            }
+
+            public void Setup(Guid timelineId, Guid timelineRecordId)
+            {
+                buffer.Append("Setup time=").AppendLine("" + timelineId);
+                logger.Setup(timelineId, timelineRecordId);
+            }
+
+            public void Write(string message)
+            {
+                logger.Write(message);
+                buffer.AppendLine(message);
+            }
+
+            public void clear()
+            {
+                buffer.Clear();
+            }
+
+            public override string ToString()
+            {
+                return buffer.ToString();
+            }
+        }
+        private readonly LoggerDecorator logger;
+
         public StepsQueue(IHostContext context, IExecutionContext executionContext, JobInitializeResult initializeResult) {
             this.developerMode = true;
             this.trace = context.GetTrace(nameof(Program));
@@ -48,6 +96,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             {
                 debugger = new JobStepsDebugger(context, executionContext);
             }
+            this.logger = new LoggerDecorator(context, context.CreateService<IPagingLogger>());
 
             // trace out all steps
             trace.Info($"Total pre-job steps: {initializeResult.PreJobSteps.Count}.");
@@ -83,6 +132,9 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 {
                     trace.Verbose($"Index: {index}, count: {initializeResult.JobSteps.Count}");
                     trace.Verbose($"Completed Jobs queue.  Total iterations: {iterations}");
+                    //trace.Verbose($"Total log follows: ");
+                    //trace.Verbose($"{logger.ToString()}");
+                    //trace.Verbose($"End");
                     break;
                 }
                 if (last + 1 != index && last >= index)
@@ -92,7 +144,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 }
 
                 IStep current = initializeResult.JobSteps[index];
-                current.ExecutionContext.reset();
+                current.ExecutionContext.reset(logger);
                 yield return current;
                 iterations++;
                 directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(index));
