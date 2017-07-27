@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
@@ -100,15 +101,23 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             {
                 if (!cancellationToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(3)))
                 {
-                    string content = debuggerClient.GetAsync("http://127.0.0.1:7777/next").Result.Content.ReadAsStringAsync().Result;
-                    JObject jsonObject = JObject.Parse(content);
-                    Trace.TraceInformation($"Returned from UI: {jsonObject}");
-                    step = jsonObject.GetValue("next").ToObject<int>();
-                    IDictionary<string, JToken> properties = (JObject) jsonObject.GetValue("parameters");
+                    HttpResponseMessage httpResponse = debuggerClient.GetAsync("http://127.0.0.1:7777/next").Result;
+                    if (httpResponse.StatusCode == HttpStatusCode.OK) {
+                        string content = httpResponse.Content.ReadAsStringAsync().Result;
 
-                    foreach (string key in properties.Keys)
+                        JObject jsonObject = JObject.Parse(content);
+                        Trace.TraceInformation($"Returned from UI: {jsonObject}");
+                        step = jsonObject.GetValue("next").ToObject<int>();
+                        IDictionary<string, JToken> properties = (JObject) jsonObject.GetValue("parameters");
+
+                        foreach (string key in properties.Keys)
+                        {
+                            inputsForStep[key] = properties[key].Value<string>();
+                        }
+                    }
+                    else
                     {
-                        inputsForStep[key] = properties[key].Value<string>();
+                        Trace.TraceWarning($"Got unexpected response from UI server: ({httpResponse.StatusCode}, {httpResponse.Content.ReadAsStringAsync().Result})");
                     }
                 }
             }
