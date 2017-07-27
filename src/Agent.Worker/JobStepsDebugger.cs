@@ -15,6 +15,8 @@ using System.Windows.Input;
 using Microsoft.TeamFoundation.DistributedTask.Orchestration.Server.Expressions;
 using Microsoft.VisualStudio.Services.Agent.Worker;
 using Microsoft.VisualStudio.Services.Agent.Worker.Handlers;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.VisualStudio.Services.Agent.Worker
 {
@@ -89,6 +91,28 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             }                                                                
 
             debuggerClient.PostAsJsonAsync<DebuggerState>("http://127.0.0.1:7777/update", state);
+        }
+
+        public int NextStep(CancellationToken cancellationToken, IDictionary<string, string> inputsForStep)
+        {
+            int step = -1;
+            while (!cancellationToken.IsCancellationRequested && step < 0)
+            {
+                if (!cancellationToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(3)))
+                {
+                    string content = debuggerClient.GetAsync("http://127.0.0.1:7777/next").Result.Content.ReadAsStringAsync().Result;
+                    JObject jsonObject = JObject.Parse(content);
+                    Trace.TraceInformation($"Returned from UI: {jsonObject}");
+                    step = jsonObject.GetValue("next").ToObject<int>();
+                    IDictionary<string, JToken> properties = (JObject) jsonObject.GetValue("parameters");
+
+                    foreach (string key in properties.Keys)
+                    {
+                        inputsForStep[key] = properties[key].Value<string>();
+                    }
+                }
+            }
+            return step;
         }
 
         public void AppendLog(string log)

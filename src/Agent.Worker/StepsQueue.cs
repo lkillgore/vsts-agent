@@ -128,7 +128,8 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             {
                 // Ask the user which task to run next
                 int last = index;
-                index = GetNextTask(index);
+                Dictionary<string, string> newParameters = new Dictionary<string, string>();
+                index = debugger.NextStep(executionContext.CancellationToken, newParameters);
                 if (index < 0 || index >= initializeResult.JobSteps.Count)
                 {
                     trace.Verbose($"Index: {index}, count: {initializeResult.JobSteps.Count}");
@@ -143,12 +144,32 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                     trace.Verbose($"Moving to step: {index}, from step: {last}");
                     directoryManager.RestoreDevelopmentSnapshot(executionContext, GetNameForStep(index - 1));
                 }
+                else if (last + 1 < index)
+                {
+                    int fill = last + 1;
+                    while (fill < index)
+                    {
+                        trace.Verbose($"Filling in missing steps: {fill}");
+                        directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(fill));
+                        fill++;
+                    }
+                }
 
                 IStep current = initializeResult.JobSteps[index];
+                if (current is ITaskRunner)
+                {
+                    ITaskRunner r = (ITaskRunner) current;
+                    r.TaskInstance.Inputs.Clear();
+                    foreach (string key in newParameters.Keys)
+                    {
+                        r.TaskInstance.Inputs.Add(key, newParameters[key]);
+                    }
+                }
                 current.ExecutionContext.reset(logger);
                 yield return current;
                 iterations++;
                 directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(index));
+                debugger.UpdateState(index, initializeResult.JobSteps);
                 debugger.AppendLog(logger.ToString());
                 logger.Clear();
             }
@@ -167,12 +188,6 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         public IEnumerable<IStep> GetPreJobSteps()
         {
             return initializeResult.PreJobSteps;
-        }
-
-        public int GetNextTask(int currentTaskIndex)
-        {
-            debugger.UpdateState(currentTaskIndex, initializeResult.JobSteps);
-            return currentTaskIndex++;
         }
     }
 }

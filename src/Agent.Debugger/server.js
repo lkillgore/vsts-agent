@@ -13,7 +13,7 @@ var state = {
     ],
     current: 0
 }
-var nextTaskToExecute = undefined
+var nextTaskToExecute = 0
 var consoleLines = [''];
 var resumeExecution = false;
 
@@ -23,6 +23,7 @@ app.get('/', function (req, res) {
 
 app.post('/update', function (req, res) {
     resumeExecution = false;
+    nextTaskToExecute = 0;
     state = req.body;
     res.status(200);
     res.end();
@@ -143,8 +144,8 @@ function getMainView() {
 }
 
 function getNext() {
-    if (resumeExecution && state && state.tasks) {
-        return { next: nextTaskToExecute, parameters: state.tasks[taskId].parameters }
+    if (resumeExecution && state && state.tasks && nextTaskToExecute && state.tasks.length < nextTaskToExecute) {
+        return { next: nextTaskToExecute, parameters: state.tasks[nextTaskToExecute].parameters }
     }
-    return { next: -1, paramaters: {} }
+    return { next: -1, parameters: {} }
 }
