@@ -58,7 +58,93 @@ app.listen(7777);
 
 function getMainView() {
     let consoleOutput = consoleLines.join('\n');
+
+    let nextTask = undefined;
+    let nextTaskInstance = undefined;
+    let htmlTasks = ''
+    if (state && state.tasks) {
+        nextTask = nextTaskToExecute >= 0 ? nextTaskToExecute : state.current + 1;
+        let width = 100 / (state.tasks.length + 2);
+        for(let i = 0; i < state.tasks.length; i++) {
+            let name = state.tasks[i].name;
+            let color = state.current === i ? 'blue' : 'darkblue';
+            let hint = nextTask === i ? 'This is the next task that will execute when you hit continue':'Click here to make this the next task that will execute';
+            let onclick = nextTask === i ? '' : `onclick="setNext(${i})"`
+            let border = nextTask === i ? `border: 4px solid green;` : ''
+            htmlTasks += `<td ${onclick} style="color:#FFFFFF;background:${color};${border}" width="${width}%" height="75px" title="${hint}">`;
+            htmlTasks += `<div align="center">${name}</div></td><td class="sep">&rarr;</td>`;
+            if (i === nextTask) {
+                nextTaskInstance = state.tasks[i];
+            }
+        }
+    }
+
+
     let html = `<html>
+    <style media="screen" type="text/css">
+        html, body {
+            height: 100%;
+            margin: 0px;
+        }
+
+        #wrapper:before {
+            content:'';
+            float: left;
+            height: 100%;
+        }
+        #wrapper {
+            height: 100%;
+            background-color: black;
+            color: white;
+        }
+        #header {
+            background-color:#000;
+        }
+        #content {
+            background-color: gray;
+            padding-top: 20px;
+        }
+        #content:after {
+            content:'';
+            display: block;
+            clear: both;
+        }
+
+        .btn {
+            background: #3498db;
+            background-image: -webkit-linear-gradient(top, #3498db, #2980b9);
+            background-image: -moz-linear-gradient(top, #3498db, #2980b9);
+            background-image: -ms-linear-gradient(top, #3498db, #2980b9);
+            background-image: -o-linear-gradient(top, #3498db, #2980b9);
+            background-image: linear-gradient(to bottom, #3498db, #2980b9);
+            -webkit-border-radius: 28;
+            -moz-border-radius: 28;
+            border-radius: 28px;
+            font-family: Arial;
+            color: #ffffff;
+            font-size: 20px;
+            padding: 10px 20px 10px 20px;
+            text-decoration: none;
+            vertical-align: middle;
+        }
+
+        .btn:hover {
+            background: #3cb0fd;
+            background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
+            background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
+            background-image: -ms-linear-gradient(top, #3cb0fd, #3498db);
+            background-image: -o-linear-gradient(top, #3cb0fd, #3498db);
+            background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
+            text-decoration: none;
+            vertical-align: middle;
+        }
+        
+        .sep {
+            background-color: black;
+            color: white;
+            width: 10px;
+        }
+    </style>
     <SCRIPT Language="javascript">
         function post(path, params, method) {
             method = method || "post"; // Set method to post by default if not specified.
@@ -93,48 +179,35 @@ function getMainView() {
             post('/updateparameters/', {taskId: taskId, parameters: node.textContent});
         }
     </SCRIPT>
-
-    <table width="100%">
-        <tr>
-            <td id="start" width="25px"><div style="position: relative; background-color: #00FF00; width: 25;  height: 25;  border-radius: 50%;"></div></td>
-            <td id="separator1" width="10px">&rarr;</td>`;
-
-    let nextTask = undefined;
-    let nextTaskInstance = undefined;
-    if (state && state.tasks) {
-        nextTask = nextTaskToExecute >= 0 ? nextTaskToExecute : state.current + 1;
-        let width = 100 / (state.tasks.length + 2);
-        for(let i = 0; i < state.tasks.length; i++) {
-            let name = state.tasks[i].name;
-            let color = state.current === i ? 'blue' : 'darkblue';
-            let radioColor = nextTask === i ? 'green' : 'gray';
-            let hint = nextTask === i ? 'This is the next task that will execute when you hit continue':'Click here to make this the next task that will execute';
-            let onclick = nextTask === i ? '' : `onclick="setNext(${i})"`
-            html += `<td style="color:#FFFFFF;background:${color}" width="${width}%" height="75px">`;
-            if (i <= state.current + 1) {
-                html += `<div ${onclick} style="vertical-align:top; float:right; background-color:${radioColor}; width: 15;  height: 15;  border-radius: 50%;" title="${hint}"></div>`;
-            }
-            html += `<div align="center">${name}</div></td><td width="10px">&rarr;</td>`;
-            if (i === nextTask) {
-                nextTaskInstance = state.tasks[i];
-            }
-        }
-    }
+    <div id="wrapper">
+        <div id="header">
+            <div style="text-align:center; padding-top:30; margin-bottom:30; width=100%;">
+                <a class="btn" onclick="updateParameters(${nextTask})" title="Save Changes and Continue Execution">&#9658</a>
+                <a class="btn" onclick="updateParameters(-100)" title="Stop Debugging and Continue Execution">&#9724</a>
+            </div>
+        <table width="100%">
+            <tr>
+                <td id="start" width="25px"><div style="position: relative; background-color: #00FF00; width: 25;  height: 25;  border-radius: 50%;"></div></td>
+                <td class="sep">&rarr;</td>`;
+    html += htmlTasks;
 
     let parametersHeader = nextTaskInstance ? nextTaskInstance.name + ' Parameters (editable json)': 'No task selected to run next';
     let parametersJson = nextTaskInstance ? JSON.stringify(nextTaskInstance.parameters, undefined, 4) : '';
     let parametersEncoded = "'" + encodeURIComponent(parametersJson) + "'";
 
     let htmlEnd = `<td id="end" width="25px" ><div style="position: relative; background-color: #FF0000; width: 25;  height: 25;  border-radius: 50%;"></div></td>
-            <td id="spacer"><div></div></td>
-        </tr>
-    </table>
-    <div><button type="button" onclick="updateParameters(${nextTask})">Save Changes and Continue Execution</button></div>
-    <div width="100%">${parametersHeader}</div>
-    <div contenteditable id="parameters" style="background-color:#D0D0D0; color:#000000; white-space: pre-wrap;">${parametersJson}</div>
-    <div>Console Output</div>
-    <div id="console" style="background-color:#000000; color:#D0D0D0; white-space: pre-wrap;">
-    ${consoleOutput}
+                <td id="spacer"><div></div></td>
+            </tr>
+        </table>
+        <div style="width:100%; margin-top:30; text-align:center;">${parametersHeader}</div>
+        <div contenteditable id="parameters" style="background-color:#D0D0D0; color:#000000; white-space: pre-wrap;">${parametersJson}</div>
+        </div>
+        <div id="content">
+            <div style="text-align:center; width:100%">Console Output</div>
+            <div id="console" style="white-space: pre-wrap; height=">
+            ${consoleOutput}
+            </div>
+        </div>
     </div>
     </html>`;
 
