@@ -70,6 +70,11 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             debuggerClient.PostAsJsonAsync<DebuggerState>("http://127.0.0.1:7777/update", state);
         }
 
+        public void AppendLog(string log)
+        {
+            // debuggerClient.PostAsync<DebuggerState>("http://127.0.0.1:7777/appendconsole", log);
+        }
+
         public class DebuggerState 
         {
             public class Task 

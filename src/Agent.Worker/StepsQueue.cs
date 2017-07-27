@@ -72,7 +72,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 buffer.AppendLine(message);
             }
 
-            public void clear()
+            public void Clear()
             {
                 buffer.Clear();
             }
@@ -149,6 +149,8 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 yield return current;
                 iterations++;
                 directoryManager.SaveDevelopmentSnapshot(executionContext, GetNameForStep(index));
+                debugger.AppendLog(logger.ToString());
+                logger.Clear();
             }
         }
 
