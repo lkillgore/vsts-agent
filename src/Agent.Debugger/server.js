@@ -7,12 +7,7 @@ app.set('port', 7777);
 app.use(express.logger('dev'));  /* 'default', 'short', 'tiny', 'dev' */
 app.use(express.bodyParser());
 
-var state = {
-    tasks: [
-        { name: "Loading...", parameters: { key1: "value1", key2: "value2" } }
-    ],
-    current: 0
-}
+var state = {}
 var nextTaskToExecute = 0
 var consoleLines = [''];
 var resumeExecution = false;
@@ -22,25 +17,20 @@ app.get('/', function (req, res) {
 })
 
 app.post('/update', function (req, res) {
-    resumeExecution = false;
-    nextTaskToExecute = 0;
-    state = req.body;
+    setState(req.body);
     res.status(200);
     res.end();
 })
 
 app.post('/updateparameters', function (req, res) {
-    resumeExecution = true;
     let taskId = parseInt(req.body.taskId);
-    let parameters = JSON.parse(req.body.parameters);
-    if (state && state.tasks) {
-        state.tasks[taskId].parameters = parameters;
-    }
+    let parameters = req.body.parameters ? JSON.parse(req.body.parameters) : {};
+    updateAndContinue(taskId, parameters);
     res.redirect('/');
 })
 
 app.post('/setnext', function (req, res) {
-    nextTaskToExecute = parseInt(req.body.id);
+    setNextTask(parseInt(req.body.id));
     res.redirect('/');
 })
 
@@ -54,7 +44,48 @@ app.get('/next', function (req, res) {
    res.json(getNext());
 })
 
+initialize();
 app.listen(7777);
+
+function initialize() {
+    state = {
+        tasks: [
+            { name: "Loading...", parameters: { key1: "value1", key2: "value2" } }
+        ],
+        current: 0
+    }
+    nextTaskToExecute = 0;
+    consoleLines = [''];
+    resumeExecution = false;
+}
+
+function setState(newState) {
+    setContinue(false);
+    state = newState;
+    setNextTask(state.current + 1);
+}
+
+function updateAndContinue(taskId, newParameters) {
+    if (taskId > 0) {
+        if (state && state.tasks) {
+            state.tasks[taskId].parameters = newParameters;
+        }
+    }
+    setNextTask(taskId);
+    setContinue(true);
+}
+
+function setNextTask(taskId) {
+    if (taskId < 0) {
+        // Stop debugging; set next to end+1
+        nextTaskToExecute = state.tasks.length;
+    }
+    nextTaskToExecute = taskId;
+}
+
+function setContinue(shouldContinue) {
+    resumeExecution = shouldContinue;
+}
 
 function getMainView() {
     let consoleOutput = consoleLines.join('\n');
@@ -217,7 +248,7 @@ function getMainView() {
 }
 
 function getNext() {
-    if (resumeExecution && state && state.tasks && nextTaskToExecute && state.tasks.length < nextTaskToExecute) {
+    if (resumeExecution && state && state.tasks) {
         return { next: nextTaskToExecute, parameters: state.tasks[nextTaskToExecute].parameters }
     }
     return { next: -1, parameters: {} }
