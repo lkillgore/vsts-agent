@@ -49,9 +49,9 @@ elif [[ "$PLATFORM" == 'darwin' ]]; then
    runtime_id='osx.10.11-x64'
 fi
 
-build_dirs=("Microsoft.VisualStudio.Services.Agent" "Agent.Listener" "Agent.Worker" "Agent.Debugger" "Test")
-build_clean_dirs=("Agent.Listener" "Test" "Agent.Worker" "Agent.Debugger" "Microsoft.VisualStudio.Services.Agent")
-bin_layout_dirs=("Agent.Debugger" "Agent.Listener" "Microsoft.VisualStudio.Services.Agent" "Agent.Worker")
+build_dirs=("Microsoft.VisualStudio.Services.Agent" "Agent.Listener" "Agent.Worker" "Test")
+build_clean_dirs=("Agent.Listener" "Test" "Agent.Worker" "Microsoft.VisualStudio.Services.Agent")
+bin_layout_dirs=("Agent.Listener" "Microsoft.VisualStudio.Services.Agent" "Agent.Worker")
 WINDOWSAGENTSERVICE_PROJFILE="Agent.Service/Windows/AgentService.csproj"
 WINDOWSAGENTSERVICE_BIN="Agent.Service/Windows/bin/Debug"
 
@@ -161,6 +161,13 @@ function build ()
     if [[ "$define_os" == 'OS_WINDOWS' && "$msbuild_location" != "" ]]; then
         $msbuild_location/msbuild.exe $WINDOWSAGENTSERVICE_PROJFILE || failed "msbuild AgentService.csproj"
     fi
+    
+    echo "Building Agent.Debugger"
+    cd Agent.Debugger
+    npm install
+    cd ..
+    echo "Done building Agent.Debugger"
+    
 }
 
 function restore ()
@@ -207,7 +214,7 @@ function layout ()
     
     heading Layout ...
     rm -Rf ${LAYOUT_DIR}
-    mkdir -p ${LAYOUT_DIR}/bin
+    mkdir -p ${LAYOUT_DIR}/bin/debugger
     for bin_copy_dir in ${bin_layout_dirs[@]}
     do
         copyBin ${bin_copy_dir}
@@ -218,6 +225,8 @@ function layout ()
         echo Copying Agent.Service
         cp -Rf $WINDOWSAGENTSERVICE_BIN/* ${LAYOUT_DIR}/bin
     fi
+    
+    cp -Rf ./Agent.Debugger/* ${LAYOUT_DIR}/bin/debugger
     
     cp -Rf ./Misc/layoutroot/* ${LAYOUT_DIR}
     cp -Rf ./Misc/layoutbin/* ${LAYOUT_DIR}/bin

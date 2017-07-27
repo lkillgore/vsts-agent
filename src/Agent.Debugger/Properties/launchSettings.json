@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Agent.Debugger": {
-      "commandName": "Project",
-      "commandLineArgs": "\"task1, task2, task3|1|building monkeys|throwing monkeys|killing time\""
-    }
-  }
-}

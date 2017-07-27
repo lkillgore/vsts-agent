@@ -3,14 +3,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.TeamFoundation.DistributedTask.Orchestration.Server.Expressions;
 using Microsoft.VisualStudio.Services.Agent.Worker;
+using Microsoft.VisualStudio.Services.Agent.Worker.Handlers;
 
 namespace Microsoft.VisualStudio.Services.Agent.Worker
 {
@@ -30,6 +33,8 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         private readonly Tracing trace;
         private readonly bool developerMode;
         private readonly IBuildDirectoryManager directoryManager;
+        private readonly IHostContext context;
+        private readonly JobStepsDebugger debugger;
 
         public StepsQueue(IHostContext context, IExecutionContext executionContext, JobInitializeResult initializeResult) {
             this.developerMode = true;
@@ -37,6 +42,12 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             this.initializeResult = initializeResult;
             this.executionContext = executionContext;
             this.directoryManager = context.GetService<IBuildDirectoryManager>();
+            this.context = context;
+
+            if (developerMode) 
+            {
+                debugger = new JobStepsDebugger(context, executionContext);
+            }
 
             // trace out all steps
             trace.Info($"Total pre-job steps: {initializeResult.PreJobSteps.Count}.");
@@ -103,11 +114,10 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             return initializeResult.PreJobSteps;
         }
 
-        int i = 0;
         public int GetNextTask(int currentTaskIndex)
         {
-            int[] tasks = new int[] {0, 1, 0, 1, 2};
-            return tasks[i++];
+            debugger.UpdateState(currentTaskIndex, initializeResult.JobSteps);
+            return currentTaskIndex++;
         }
     }
 }

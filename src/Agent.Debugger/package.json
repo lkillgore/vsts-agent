@@ -1,0 +1,11 @@
+{
+  "name": "debugger-view",
+  "description": "VSTS Agent debugger view",
+  "version": "0.0.1",
+  "private": false,
+  "dependencies": {
+    "express": "3.x",
+    "path": "0.12.7",
+    "jsdom":"11.1.0"
+  }
+}
