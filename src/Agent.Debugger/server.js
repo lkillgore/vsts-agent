@@ -177,6 +177,17 @@ function getMainView() {
         }
     </style>
     <SCRIPT Language="javascript">
+        function refreshTimer() {
+            var ele = document.getElementById("fullState");
+            if(ele.style.display == "block") {
+                // don't refresh
+            }
+            else {
+                // refresh
+                document.location.reload(true);
+            }
+        }
+
         function post(path, params, method) {
             method = method || "post"; // Set method to post by default if not specified.
 
@@ -219,6 +230,11 @@ function getMainView() {
                 ele.style.display = "block";
             }
         }
+
+        window.onload = function() { 
+            setInterval(refreshTimer, 3000);
+        };
+
     </SCRIPT>
     <div id="wrapper">
         <div id="header">
