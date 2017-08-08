@@ -161,6 +161,13 @@ function build ()
     if [[ "$define_os" == 'OS_WINDOWS' && "$msbuild_location" != "" ]]; then
         $msbuild_location/msbuild.exe $WINDOWSAGENTSERVICE_PROJFILE || failed "msbuild AgentService.csproj"
     fi
+    
+    echo "Building Agent.Debugger"
+    cd Agent.Debugger
+    npm install
+    cd ..
+    echo "Done building Agent.Debugger"
+    
 }
 
 function restore ()
@@ -207,7 +214,7 @@ function layout ()
     
     heading Layout ...
     rm -Rf ${LAYOUT_DIR}
-    mkdir -p ${LAYOUT_DIR}/bin
+    mkdir -p ${LAYOUT_DIR}/bin/debugger
     for bin_copy_dir in ${bin_layout_dirs[@]}
     do
         copyBin ${bin_copy_dir}
@@ -219,6 +226,8 @@ function layout ()
         cp -Rf $WINDOWSAGENTSERVICE_BIN/* ${LAYOUT_DIR}/bin
     fi
     
+    cp -Rf ./Agent.Debugger/* ${LAYOUT_DIR}/bin/debugger
+    
     cp -Rf ./Misc/layoutroot/* ${LAYOUT_DIR}
     cp -Rf ./Misc/layoutbin/* ${LAYOUT_DIR}/bin
     
@@ -226,6 +235,7 @@ function layout ()
     if [[ "$PLATFORM" == 'linux' ]]; then
         chmod +x ${LAYOUT_DIR}/bin/Agent.Listener
         chmod +x ${LAYOUT_DIR}/bin/Agent.Worker
+        chmod +x ${LAYOUT_DIR}/bin/Agent.Debugger
     fi
 
     # clean up files not meant for platform
